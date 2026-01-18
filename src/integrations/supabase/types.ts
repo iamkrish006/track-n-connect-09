@@ -47,6 +47,13 @@ export type Database = {
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "application_status_history_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_user_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       applications: {
@@ -194,7 +201,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      applications_user_view: {
+        Row: {
+          applied_at: string | null
+          cover_letter: string | null
+          id: string | null
+          job_id: string | null
+          status: Database["public"]["Enums"]["application_status"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          cover_letter?: string | null
+          id?: string | null
+          job_id?: string | null
+          status?: Database["public"]["Enums"]["application_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          cover_letter?: string | null
+          id?: string | null
+          job_id?: string | null
+          status?: Database["public"]["Enums"]["application_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_role: {

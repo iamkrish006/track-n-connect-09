@@ -17,6 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Job } from '@/lib/types';
+import { coverLetterSchema } from '@/lib/validations';
+import { toast } from 'sonner';
+
+const MAX_COVER_LETTER_LENGTH = 5000;
 
 export default function Jobs() {
   const { data: jobs = [], isLoading } = useJobs();
@@ -26,6 +30,7 @@ export default function Jobs() {
   const [search, setSearch] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
+  const [coverLetterError, setCoverLetterError] = useState('');
 
   const appliedJobIds = new Set(applications.map(a => a.job_id));
 
@@ -37,16 +42,45 @@ export default function Jobs() {
     )
   );
 
+  const handleCoverLetterChange = (value: string) => {
+    // Enforce max length at input level
+    if (value.length > MAX_COVER_LETTER_LENGTH) {
+      value = value.slice(0, MAX_COVER_LETTER_LENGTH);
+    }
+    setCoverLetter(value);
+    
+    // Clear error when user is typing
+    if (coverLetterError) {
+      setCoverLetterError('');
+    }
+  };
+
   const handleApply = async () => {
     if (!selectedJob) return;
     
+    // Validate cover letter
+    const result = coverLetterSchema.safeParse(coverLetter);
+    if (!result.success) {
+      setCoverLetterError(result.error.errors[0]?.message || 'Invalid cover letter');
+      toast.error('Please fix the validation error');
+      return;
+    }
+    
+    setCoverLetterError('');
+    
     await applyMutation.mutateAsync({
       jobId: selectedJob.id,
-      coverLetter: coverLetter || undefined,
+      coverLetter: result.data || undefined,
     });
     
     setSelectedJob(null);
     setCoverLetter('');
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedJob(null);
+    setCoverLetter('');
+    setCoverLetterError('');
   };
 
   return (
@@ -67,6 +101,7 @@ export default function Jobs() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
+            maxLength={200}
           />
         </div>
 
@@ -94,7 +129,7 @@ export default function Jobs() {
         )}
 
         {/* Apply Dialog */}
-        <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
+        <Dialog open={!!selectedJob} onOpenChange={handleCloseDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Apply for {selectedJob?.title}</DialogTitle>
@@ -109,13 +144,25 @@ export default function Jobs() {
                   id="coverLetter"
                   placeholder="Tell us why you're a great fit for this role..."
                   value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
+                  onChange={(e) => handleCoverLetterChange(e.target.value)}
                   rows={5}
+                  maxLength={MAX_COVER_LETTER_LENGTH}
+                  className={coverLetterError ? 'border-destructive' : ''}
                 />
+                <div className="flex justify-between items-center">
+                  {coverLetterError ? (
+                    <p className="text-xs text-destructive">{coverLetterError}</p>
+                  ) : (
+                    <span />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {coverLetter.length}/{MAX_COVER_LETTER_LENGTH} characters
+                  </p>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedJob(null)}>
+              <Button variant="outline" onClick={handleCloseDialog}>
                 Cancel
               </Button>
               <Button 

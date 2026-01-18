@@ -12,10 +12,18 @@ export function useUserApplications() {
   const query = useQuery({
     queryKey: ['applications', user?.id],
     queryFn: async () => {
+      // Query the applications table but only select fields that users should see
+      // This excludes admin_note for security (sensitive internal notes)
       const { data, error } = await supabase
         .from('applications')
         .select(`
-          *,
+          id,
+          job_id,
+          user_id,
+          status,
+          cover_letter,
+          applied_at,
+          updated_at,
           job:jobs(*)
         `)
         .eq('user_id', user!.id)
