@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Save, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile as ProfileType } from '@/lib/types';
+import { profileFormSchema, ProfileFormData } from '@/lib/validations';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [fullName, setFullName] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchProfile() {
@@ -42,12 +44,32 @@ export default function Profile() {
   const handleSave = async () => {
     if (!user) return;
     
+    // Validate form data
+    const formData: ProfileFormData = {
+      full_name: fullName,
+      resume_url: resumeUrl,
+    };
+    
+    const result = profileFormSchema.safeParse(formData);
+    if (!result.success) {
+      const newErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as string;
+        newErrors[field] = err.message;
+      });
+      setErrors(newErrors);
+      toast.error('Please fix the validation errors');
+      return;
+    }
+    
+    setErrors({});
     setIsSaving(true);
+    
     const { error } = await supabase
       .from('profiles')
       .update({
-        full_name: fullName,
-        resume_url: resumeUrl || null,
+        full_name: result.data.full_name,
+        resume_url: result.data.resume_url || null,
       })
       .eq('user_id', user.id);
 
@@ -93,13 +115,16 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Your full name"
+                maxLength={200}
+                className={errors.full_name ? 'border-destructive' : ''}
               />
+              {errors.full_name && <p className="text-xs text-destructive">{errors.full_name}</p>}
             </div>
 
             <div className="space-y-2">
@@ -122,7 +147,10 @@ export default function Profile() {
                 value={resumeUrl}
                 onChange={(e) => setResumeUrl(e.target.value)}
                 placeholder="https://example.com/your-resume.pdf"
+                maxLength={2000}
+                className={errors.resume_url ? 'border-destructive' : ''}
               />
+              {errors.resume_url && <p className="text-xs text-destructive">{errors.resume_url}</p>}
               <p className="text-xs text-muted-foreground">
                 Link to your resume (Google Drive, Dropbox, etc.)
               </p>

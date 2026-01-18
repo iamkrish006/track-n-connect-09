@@ -35,7 +35,7 @@ export function useJob(id: string) {
   });
 }
 
-interface CreateJobInput {
+export interface CreateJobInput {
   title: string;
   company: string;
   description: string;
@@ -45,6 +45,7 @@ interface CreateJobInput {
   job_type: JobType;
   salary_range?: string;
   deadline?: string;
+  is_active?: boolean;
 }
 
 export function useCreateJob() {
